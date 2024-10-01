@@ -1,9 +1,0 @@
-Batch size 9,Total time: 1939.812322998047 ms
-Batch size 8,Total time: 1725.9273559570313 ms
-Batch size 7,Total time: 1603.1360107421874 ms
-Batch size 6,Total time: 1379.9326599121093 ms
-Batch size 5,Total time: 1163.1532958984376 ms
-Batch size 4,Total time: 1001.3662200927735 ms
-Batch size 3,Total time: 808.0403442382812 ms
-Batch size 2,Total time: 638.086865234375 ms
-Batch size 1,Total time: 441.25623779296876 ms
