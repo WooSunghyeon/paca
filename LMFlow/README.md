@@ -17,6 +17,11 @@ bash install.sh
 
 2. Install the custom version of PEFT that supports PaCA and QPaCA:
 
+```bash
+cd ../peft
+pip install -v -e .
+```
+
 The detailed implementation can be found in `../peft/src/peft/tuners/paca/layers`
 
 
@@ -33,16 +38,3 @@ bash mmlu_scripts/run_paca.sh merge # PaCA
 
 ### Acknowledgement
 This repository is based on the [LMFlow](https://github.com/OptimalScale/LMFlow) and [OwLore](https://github.com/pixeli99/OwLore) repositories. We are grateful for their excellent work.
-
-## Citation
-If you find our work helpful for your research, please consider citing the following BibTeX entry.
-```
-@misc{li2024owlore,
-      title={OwLore: Outlier-weighed Layerwise Sampled Low-Rank Projection for Memory-Efficient LLM Fine-tuning}, 
-      author={Pengxiang Li and Lu Yin and Xiaowei Gao and Shiwei Liu},
-      year={2024},
-      eprint={2405.18380},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
-}
-```

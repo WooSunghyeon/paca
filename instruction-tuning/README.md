@@ -8,13 +8,18 @@ In this directory, we apply PaCA and QPaCA to general instruction-tuning code us
 
 Please follow the steps below to set up the environment and dependencies for fine-tuning LLaMA3-8b using PaCA and QPaCA.
 
-1. Install the required dependencies:
+1. Install the required dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Install the custom version of PEFT that supports PaCA and QPaCA:
+2. Install the custom version of PEFT that supports PaCA and QPaCA
+
+```bash
+cd ../peft
+pip install -v -e .
+```
 
 The detailed implementation can be found in `../peft/src/peft/tuners/paca/layers`
 
