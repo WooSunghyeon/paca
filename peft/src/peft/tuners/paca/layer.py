@@ -170,6 +170,7 @@ class Linear(nn.Module, PacaLayer):
         fan_in_fan_out: bool = False,  # Set this to True if the layer to replace stores weight like (fan_in, fan_out)
         is_target_conv_1d_layer: bool = False,
         gradient_accumulation_steps: int = 1,
+        select_grad: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -185,6 +186,9 @@ class Linear(nn.Module, PacaLayer):
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
         self.gradient_accumulation_steps = gradient_accumulation_steps
         self.iterations=0
+        self.select_grad= select_grad
+        self.done_selection = False
+        self.accum_grad = None
 
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
         """
@@ -231,7 +235,15 @@ class Linear(nn.Module, PacaLayer):
     def forward(self, x: torch.Tensor, *args: Any, **kwargs: Any) -> torch.Tensor:
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
-    
+
+        if self.accum_grad is not None and not(self.select_grad) and not(self.done_selection):
+            for active_adapter in self.active_adapters:
+                self.paca_indices[active_adapter] = torch.topk(self.accum_grad.norm(dim=0),  self.r[self.active_adapters]).indices
+                with gather_params_ctx(self.get_base_layer().weight):
+                    self.paca_init(active_adapter)
+            self.done_selection = True
+            self.select_grad = None
+        
         if adapter_names is not None:
             result = self._mixed_batch_forward(x, *args, adapter_names=adapter_names, **kwargs)
         elif self.merged:
@@ -244,7 +256,7 @@ class Linear(nn.Module, PacaLayer):
                 if self.training and self.iterations % (2*self.gradient_accumulation_steps):
                     self.paca_update(active_adapter)
                 paca_w = self.paca_w[active_adapter]*self.scaling[active_adapter]
-                result = pacalinear.apply(x, self.weight, paca_w, self.bias, self.paca_indices[active_adapter])
+                result = pacalinear.apply(x, self.weight, paca_w, self.bias, self.paca_indices[active_adapter], self.select_grad, self.accum_grad)
         return result
 
     def __repr__(self) -> str:
@@ -257,7 +269,7 @@ class pacalinear(torch.autograd.Function):
     @staticmethod
     @custom_fwd
     # bias is an optional argument
-    def forward(ctx, input, weight, paca_w=None, bias=None, paca_indices=None):
+    def forward(ctx, input, weight, paca_w=None, bias=None, paca_indices=None, select_grad=False, accum_grad=None):
         if input.dim() == 2 and bias is not None:
             # fused op is marginally faster
             ret = torch.addmm(bias, input, weight.t())
@@ -266,32 +278,53 @@ class pacalinear(torch.autograd.Function):
             if bias is not None:
                 output += bias
             ret = output
-        ctx.save_for_backward(prune_activation(input, paca_indices), weight, bias)
+        if not(select_grad):
+            ctx.save_for_backward(prune_activation(input, paca_indices), weight, bias)
+        else: 
+            ctx.save_for_backward(input, weight, bias, accum_grad)
+        ctx.select_grad = select_grad
         return ret
 
     # This function has only a single output, so it gets only one gradient
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_output):
-        pruned_input, weight, bias = ctx.saved_tensors
+        if not ctx.select_grad:
+            pruned_input, weight, bias = ctx.saved_tensors
+        else:    
+            pruned_input, weight, bias, accum_grad = ctx.saved_tensors
+        
         grad_input = grad_paca_w = grad_bias = None
         if ctx.needs_input_grad[0]:
             grad_input = grad_output.matmul(weight)
-                
-        if ctx.needs_input_grad[2]:
+        
+        if not ctx.select_grad:   
+            if ctx.needs_input_grad[2]:
+                dim = grad_output.dim()
+                if dim > 2:
+                    grad_paca_w = grad_output.reshape(-1,
+                                                    grad_output.shape[-1]).t().matmul(pruned_input.reshape(-1, pruned_input.shape[-1]))
+                else:
+                    grad_paca_w = grad_output.t().matmul(pruned_input)
+        else:
             dim = grad_output.dim()
             if dim > 2:
-                grad_paca_w = grad_output.reshape(-1,
-                                                  grad_output.shape[-1]).t().matmul(pruned_input.reshape(-1, pruned_input.shape[-1]))
+                grad_tensor = grad_output.reshape(-1,
+                                                grad_output.shape[-1]).t().matmul(pruned_input.reshape(-1, pruned_input.shape[-1]))
             else:
-                grad_paca_w = grad_output.t().matmul(pruned_input)
-
+                grad_tensor = grad_output.t().matmul(pruned_input)
+            
+            if accum_grad is not None:
+                accum_grad += grad_tensor
+            else:
+                accum_grad = grad_tensor    
+        
         if bias is not None and ctx.needs_input_grad[2]:
             if dim > 2:
                 grad_bias = grad_output.sum([i for i in range(dim - 1)])
             else:
                 grad_bias = grad_output.sum(0)
-        return grad_input, None, grad_paca_w, grad_bias, None
+        return grad_input, None, grad_paca_w, grad_bias, None, None, None
 
 
 def prune_weight(weight, indices=None):
@@ -321,3 +354,9 @@ def dispatch_default(target: torch.nn.Module, adapter_name: str, **kwargs):
             **kwargs,
         )
     return new_module
+
+
+def set_select_grad_false(model):
+    for module in model.modules():
+        if isinstance(module, nn.Module):
+            module.select_grad = False
