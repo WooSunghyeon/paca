@@ -33,7 +33,7 @@ You can download processed MMLU datasets by [OwLore](https://github.com/pixeli99
 
 We provide a quick scripts for fine-tuning, merging, and evaluating LLaMA2-7B on the MMLU dataset:
 ```bash
-bash mmlu_scripts/run_paca.sh merge # PaCA
+bash mmlu_scripts/run_paca.sh mmlu # PaCA
 ```
 
 ### Acknowledgement
