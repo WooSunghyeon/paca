@@ -188,8 +188,7 @@ class Linear(nn.Module, PacaLayer):
         self.iterations=0
         self.select_grad= select_grad
         self.done_selection = False
-        self.accum_grad = None
-
+        
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
         """
         Merge the active adapter weights into the base weights
@@ -236,14 +235,6 @@ class Linear(nn.Module, PacaLayer):
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
 
-        if self.accum_grad is not None and not(self.select_grad) and not(self.done_selection):
-            for active_adapter in self.active_adapters:
-                self.paca_indices[active_adapter] = torch.topk(self.accum_grad.norm(dim=0),  self.r[self.active_adapters]).indices
-                with gather_params_ctx(self.get_base_layer().weight):
-                    self.paca_init(active_adapter)
-            self.done_selection = True
-            self.select_grad = None
-        
         if adapter_names is not None:
             result = self._mixed_batch_forward(x, *args, adapter_names=adapter_names, **kwargs)
         elif self.merged:
@@ -256,7 +247,7 @@ class Linear(nn.Module, PacaLayer):
                 if self.training and self.iterations % (2*self.gradient_accumulation_steps):
                     self.paca_update(active_adapter)
                 paca_w = self.paca_w[active_adapter]*self.scaling[active_adapter]
-                result = pacalinear.apply(x, self.weight, paca_w, self.bias, self.paca_indices[active_adapter], self.select_grad, self.accum_grad)
+                result = pacalinear.apply(x, self.weight, paca_w, self.bias, self.paca_indices[active_adapter], self.select_grad)
         return result
 
     def __repr__(self) -> str:
@@ -269,7 +260,7 @@ class pacalinear(torch.autograd.Function):
     @staticmethod
     @custom_fwd
     # bias is an optional argument
-    def forward(ctx, input, weight, paca_w=None, bias=None, paca_indices=None, select_grad=False, accum_grad=None):
+    def forward(ctx, input, weight, paca_w=None, bias=None, paca_indices=None, select_grad=False):
         if input.dim() == 2 and bias is not None:
             # fused op is marginally faster
             ret = torch.addmm(bias, input, weight.t())
@@ -281,7 +272,7 @@ class pacalinear(torch.autograd.Function):
         if not(select_grad):
             ctx.save_for_backward(prune_activation(input, paca_indices), weight, bias)
         else: 
-            ctx.save_for_backward(input, weight, bias, accum_grad)
+            ctx.save_for_backward(input, weight, bias)
         ctx.select_grad = select_grad
         return ret
 
@@ -292,7 +283,7 @@ class pacalinear(torch.autograd.Function):
         if not ctx.select_grad:
             pruned_input, weight, bias = ctx.saved_tensors
         else:    
-            pruned_input, weight, bias, accum_grad = ctx.saved_tensors
+            pruned_input, weight, bias = ctx.saved_tensors
         
         grad_input = grad_paca_w = grad_bias = None
         if ctx.needs_input_grad[0]:
@@ -314,11 +305,6 @@ class pacalinear(torch.autograd.Function):
             else:
                 grad_tensor = grad_output.t().matmul(pruned_input)
             
-            if accum_grad is not None:
-                accum_grad += grad_tensor
-            else:
-                accum_grad = grad_tensor    
-        
         if bias is not None and ctx.needs_input_grad[2]:
             if dim > 2:
                 grad_bias = grad_output.sum([i for i in range(dim - 1)])
@@ -354,9 +340,3 @@ def dispatch_default(target: torch.nn.Module, adapter_name: str, **kwargs):
             **kwargs,
         )
     return new_module
-
-
-def set_select_grad_false(model):
-    for module in model.modules():
-        if isinstance(module, nn.Module):
-            module.select_grad = False

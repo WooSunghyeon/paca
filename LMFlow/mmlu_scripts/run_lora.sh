@@ -17,7 +17,7 @@ project_dir=$(cd "$(dirname $0)"/..; pwd)
 log_dir=${project_dir}/log/${exp_id}
 mkdir -p ${output_dir} ${log_dir}
 
-deepspeed --master_port 29501 examples/finetune.py \
+deepspeed --master_port 29500 --include=localhost:0 examples/finetune.py \
     --model_name_or_path ${model_name_or_path} \
     --trust_remote_code ${trust_remote_code} \
     --dataset_path ${dataset_path} \

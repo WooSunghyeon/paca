@@ -1,5 +1,5 @@
-# PaCA: Partial Connection Adaptation for Efficient Fine-Tuning
-This is the official PyTorch implementation of **PaCA: Partial Connection Adaption for Efficient Fine-Tuning**.
+# PaCA: Partial Connection Adaptation for Efficient Fine-Tuning [ICLR2025]
+This is the official PyTorch implementation of [PaCA: Partial Connection Adaption for Efficient Fine-Tuning](https://openreview.net/forum?id=iYkhxre0In&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3DICLR.cc%2F2025%2FConference%2FAuthors%23your-submissions)).
 
 
 ## Abstract

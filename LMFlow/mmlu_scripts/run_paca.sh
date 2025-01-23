@@ -4,7 +4,7 @@ learning_rate=1e-4
 rank=16
 alpha=64
 
-model_name_or_path=meta-llama/LLaMA-2-7b-hf
+model_name_or_path=meta-llama/Llama-2-7B-hf
 dataset_path="data/${data_dir}"
 output_dir="output_models/mmlu/llama/finetuned_llama_paca_${data_dir}_seed_${seed}_${learning_rate}_rank_${rank}_alpha_${alpha}"
 
@@ -17,7 +17,7 @@ project_dir=$(cd "$(dirname $0)"/..; pwd)
 log_dir=${project_dir}/log/${exp_id}
 mkdir -p ${output_dir} ${log_dir}
 
-deepspeed  examples/finetune.py \
+deepspeed --master_port 29500 --include=localhost:0 examples/finetune.py \
     --model_name_or_path ${model_name_or_path} \
     --trust_remote_code ${trust_remote_code} \
     --dataset_path ${dataset_path} \

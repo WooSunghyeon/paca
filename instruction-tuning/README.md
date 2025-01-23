@@ -1,6 +1,6 @@
 # Fine-tuning LLaMA3-8b using PaCA and QPaCA on the Oasst1 Dataset
 
-Due to licensing issues, we cannot release the code at this time. Once the licensing issues are resolved, we will make the code publicly available.
+This code is based on the instruction tuning code in [Vera](https://github.com/neurotechcenter/VERA). Due to licensing issues, we cannot release the code at this time. Once the licensing issues are resolved, we will make the code publicly available.
 
 In this directory, we apply PaCA and QPaCA to general instruction-tuning code using Huggingface.
 
