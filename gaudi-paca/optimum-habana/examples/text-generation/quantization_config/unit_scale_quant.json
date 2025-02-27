@@ -1,0 +1,9 @@
+{
+    "method": "HOOKS",
+    "mode": "QUANTIZE",
+    "observer": "maxabs",
+    "scale_method": "unit_scale",
+    "allowlist": {"types": [], "names":  []},
+    "blocklist": {"types": [], "names":  []},
+    "dump_stats_path": "./hqt_output/measure"
+}
