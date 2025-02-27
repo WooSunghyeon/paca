@@ -30,13 +30,13 @@ model = get_peft_model(model, peft_config)
 ## Applications
 Our PaCA can be very easily integrated with existing training code using NVIDIA GPU:
   
-[Task-specific fine tuning with LMFlow library](https://github.com/WooSunghyeon/dropbp/tree/main/huggingface)
+[Task-specific fine tuning with LMFlow library](https://github.com/WooSunghyeon/paca/tree/main/LMFlow)
 
-[Instruction-tuing with HuggingFace library](https://github.com/WooSunghyeon/dropbp/tree/main/lit-gpt)
+[Instruction-tuing with HuggingFace library](https://github.com/WooSunghyeon/paca/tree/main/instruction-tuning)
 
 Alow, PaCA also can be applicable when fine-tuning LLMs using Gaudi HPU:
 
-[Gauid training with Optimum-habana library](https://github.com/WooSunghyeon/dropbp/tree/main/optimum-habana)
+[Gauid training with Optimum-habana library](https://github.com/WooSunghyeon/paca/tree/main/gaudi-paca)
 
 
 
