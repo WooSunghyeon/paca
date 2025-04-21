@@ -38,7 +38,7 @@ from peft import (
 
 import torch
 import transformers
-from transformers.deepspeed import HfDeepSpeedConfig
+from transformers.integrations.deepspeed import HfDeepSpeedConfig
 
 from transformers.testing_utils import CaptureLogger
 

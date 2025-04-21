@@ -22,7 +22,7 @@ from transformers import (
     PreTrainedModel,
 )
 from transformers.modeling_outputs import CausalLMOutputWithPast
-from transformers.deepspeed import is_deepspeed_zero3_enabled
+from transformers.integrations.deepspeed import is_deepspeed_zero3_enabled
 
 from lmflow.models.base_model import BaseModel
 from lmflow.models.vision_encoder import build_vision_tower
