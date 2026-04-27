@@ -212,7 +212,18 @@ class PacaConfig(PeftConfig):
             )
         },
     )
-    gradient_accumulation_steps: int = field(default=1, metadata={"help": "gradient_accumulation_steps for updating original weights"})   
+    gradient_accumulation_steps: int = field(default=1, metadata={"help": "gradient_accumulation_steps for updating original weights"})
+    index_selection: Literal["random", "last"] = field(
+        default="random",
+        metadata={
+            "help": (
+                "How to choose the r input columns of the base weight that PaCa trains. "
+                "'random' (default): pick r columns uniformly at random via torch.randperm. "
+                "'last': pick the last r columns, i.e. indices [in_features - r, in_features). "
+                "For a weight of shape (out_features, in_features) = (h, h), 'last' trains W[:, -r:]."
+            )
+        },
+    )
 
     def __post_init__(self):
         self.peft_type = PeftType.PACA

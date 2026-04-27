@@ -27,6 +27,26 @@ peft_config = PacaConfig(
 model = get_peft_model(model, peft_config)
 ```
 
+### Choosing which connections to train (`index_selection`)
+
+By default PaCA picks `r` input columns of each target weight uniformly at random
+(`index_selection="random"`). You can instead train the **last `r` columns** by
+passing `index_selection="last"`. For a weight of shape
+`(out_features, in_features) = (h, h)` this trains `W[:, -r:]`, i.e. the
+trailing `r` columns rather than a random subset. Empirically this can work
+better than a random selection.
+
+```python
+peft_config = PacaConfig(
+    r=8,
+    paca_alpha=16,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    bias="none",
+    task_type=TaskType.CAUSAL_LM,
+    index_selection="last",  # "random" (default) or "last"
+)
+```
+
 ## Applications
 Our PaCA can be very easily integrated with existing training code using NVIDIA GPU:
   

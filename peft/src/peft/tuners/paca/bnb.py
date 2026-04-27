@@ -42,6 +42,7 @@ if is_bnb_4bit_available():
             r: int = 0,
             paca_alpha: int = 1,
             gradient_accumulation_steps: int = 1,
+            index_selection: str = "random",
             **kwargs,
         ) -> None:
             super().__init__()
@@ -53,10 +54,11 @@ if is_bnb_4bit_available():
                 adapter_name,
                 r,
                 paca_alpha=paca_alpha,
+                index_selection=index_selection,
                 )
-        
+
         def update_layer(
-            self, adapter_name, r, paca_alpha,
+            self, adapter_name, r, paca_alpha, index_selection: str = "random",
         ):
             # This code works for linear layers, override for other layer types
             if r <= 0:
@@ -64,10 +66,21 @@ if is_bnb_4bit_available():
 
             self.r[adapter_name] = r
             self.paca_alpha[adapter_name] = paca_alpha
-            
-            self.paca_w[adapter_name] = nn.Parameter(torch.zeros(self.out_features, r))      
+
+            self.paca_w[adapter_name] = nn.Parameter(torch.zeros(self.out_features, r))
             # Register buffer
-            self.paca_indices[adapter_name] = torch.randperm(self.in_features)[:r]
+            if index_selection == "random":
+                self.paca_indices[adapter_name] = torch.randperm(self.in_features)[:r]
+            elif index_selection == "last":
+                if r > self.in_features:
+                    raise ValueError(
+                        f"`r` ({r}) cannot exceed in_features ({self.in_features}) when index_selection='last'."
+                    )
+                self.paca_indices[adapter_name] = torch.arange(self.in_features - r, self.in_features)
+            else:
+                raise ValueError(
+                    f"Unknown index_selection={index_selection!r}. Expected one of 'random' or 'last'."
+                )
             self.scaling[adapter_name] = paca_alpha / r
             
             # for inits that require access to the base weight, use gather_param_ctx so that the weight is gathered when using DeepSpeed

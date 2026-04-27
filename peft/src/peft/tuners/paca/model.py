@@ -185,6 +185,7 @@ class PacaModel(BaseTuner):
         kwargs = {
             "r": r,
             "paca_alpha": alpha,
+            "index_selection": paca_config.index_selection,
             "loaded_in_8bit": getattr(self.model, "is_loaded_in_8bit", False),
             "loaded_in_4bit": getattr(self.model, "is_loaded_in_4bit", False),
         }
@@ -201,6 +202,7 @@ class PacaModel(BaseTuner):
                 adapter_name,
                 r,
                 paca_alpha=alpha,
+                index_selection=paca_config.index_selection,
                 )
         else:
             new_module = self._create_new_module(paca_config, adapter_name, target, **kwargs)

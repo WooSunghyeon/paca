@@ -62,7 +62,7 @@ class PacaLayer(BaseTunerLayer):
         self.out_features = out_features
 
     def update_layer(
-        self, adapter_name, r, paca_alpha,
+        self, adapter_name, r, paca_alpha, index_selection: str = "random",
     ):
         # This code works for linear layers, override for other layer types
         if r <= 0:
@@ -70,10 +70,21 @@ class PacaLayer(BaseTunerLayer):
 
         self.r[adapter_name] = r
         self.paca_alpha[adapter_name] = paca_alpha
-        
-        self.paca_w[adapter_name] = nn.Parameter(torch.zeros(self.out_features, r))      
+
+        self.paca_w[adapter_name] = nn.Parameter(torch.zeros(self.out_features, r))
         # Register buffer
-        self.paca_indices[adapter_name] = torch.randperm(self.in_features)[:r]
+        if index_selection == "random":
+            self.paca_indices[adapter_name] = torch.randperm(self.in_features)[:r]
+        elif index_selection == "last":
+            if r > self.in_features:
+                raise ValueError(
+                    f"`r` ({r}) cannot exceed in_features ({self.in_features}) when index_selection='last'."
+                )
+            self.paca_indices[adapter_name] = torch.arange(self.in_features - r, self.in_features)
+        else:
+            raise ValueError(
+                f"Unknown index_selection={index_selection!r}. Expected one of 'random' or 'last'."
+            )
         #self.paca_indices[adapter_name] = torch.topk(self.weight.norm(dim=0), r).indices
         #self.paca_indices[adapter_name] = torch.argsort(self.weight.norm(dim=0))[:r]
         self.scaling[adapter_name] = paca_alpha / r
@@ -171,6 +182,7 @@ class Linear(nn.Module, PacaLayer):
         is_target_conv_1d_layer: bool = False,
         gradient_accumulation_steps: int = 1,
         select_grad: bool = False,
+        index_selection: str = "random",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -182,6 +194,7 @@ class Linear(nn.Module, PacaLayer):
             adapter_name,
             r,
             paca_alpha=paca_alpha,
+            index_selection=index_selection,
             )
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
         self.gradient_accumulation_steps = gradient_accumulation_steps
